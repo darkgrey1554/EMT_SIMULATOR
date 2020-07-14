@@ -1,0 +1,8 @@
+﻿  EMT_SIMULATOR.cpp
+D:\Program Files (x86)\project\EMT_SIMULATOR\EMT_SIMULATOR.cpp(63,29): warning C4244: =: преобразование "double" в "float", возможна потеря данных
+  Создание кода
+  5 of 190 functions ( 2.6%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
+  Создание кода завершено
+  EMT_SIMULATOR.vcxproj -> D:\Program Files (x86)\project\EMT_SIMULATOR\x64\Release\EMT_SIMULATOR.exe
