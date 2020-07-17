@@ -194,6 +194,7 @@ int Gate_EMT_DTS::Init(const char* filename)
         }
         else
         {
+            infovector[i].size_data = 4096;
             size_data_byte = 4108;
         }
 
@@ -234,7 +235,7 @@ int Gate_EMT_DTS::Init(const char* filename)
     return 0;
 }
 
-int Gate_EMT_DTS::WriteData(void* buf, TypeData td, int size, int index, int grtype)
+int Gate_EMT_DTS::WriteData(void* buf, int sizebuf, TypeData td, int size, int index, int grtype)
 {
     int res;
     char* ibuf = (char*)buf;
@@ -248,18 +249,27 @@ int Gate_EMT_DTS::WriteData(void* buf, TypeData td, int size, int index, int grt
         {
             mut = infovector[i].mutex;
             sem = infovector[i].semaphor;
-            sizedata = infovector[i].size_data*infovector[i].k;
+            sizedata = infovector[i].size_data * infovector[i].k;
             jbuf = (char*)infovector[i].buffer;
             if (td == TypeData::GROUP)
             {
-                if (size > 4096)
+                sizedata = size;
+                if (size > 4096 || sizebuf!=4096)
+                {
+                    std::cout << "GATE_EMT_DTS\tERROR_WRITEDATA: BAD SIZE" << std::endl;
+                    return -1;
+                }
+            }
+            else
+            {
+                if (sizebuf != sizedata)
                 {
                     std::cout << "GATE_EMT_DTS\tERROR_WRITEDATA: BAD SIZE" << std::endl;
                     return -1;
                 }
             }
 
-            res=WaitForSingleObject(mut, INFINITE);
+            WaitForSingleObject(mut, INFINITE);
             if (td == TypeData::GROUP)
             {
                 for (int i = 0; i < 4; i++)
@@ -272,14 +282,23 @@ int Gate_EMT_DTS::WriteData(void* buf, TypeData td, int size, int index, int grt
                 sizedata = size;
             }
 
-            for (int i = 0; i < sizedata; i++)
+            try
             {
-                *jbuf = *ibuf;
-                jbuf++;
-                ibuf++;
+                for (int i = 0; i < sizedata; i++)
+                {
+                    *jbuf = *ibuf;
+                    jbuf++;
+                    ibuf++;
+                }
             }
-            res=ReleaseMutex(mut);
-            res=ReleaseSemaphore(sem, 1, NULL);
+            catch (...)
+            {
+                std::cout << "GATE_EMT_DTS\tERROR_WRITEDATA: ERROR COPY BUFFER" << std::endl;
+                ReleaseMutex(mut);
+                return -1;
+            }           
+            ReleaseMutex(mut);
+            ReleaseSemaphore(sem, 1, NULL);
             
             return 0;
         }
@@ -291,7 +310,7 @@ int Gate_EMT_DTS::WriteData(void* buf, TypeData td, int size, int index, int grt
     return -1;
 }
 
-int Gate_EMT_DTS::ReadData(void* buf, TypeData td, int* size, int* index, int* grtype)
+int Gate_EMT_DTS::ReadData(void* buf, int sizebuf,TypeData td, int* size, int* index, int* grtype)
 {
     char* ibuf = (char*)buf;
     char* jbuf;
@@ -302,8 +321,14 @@ int Gate_EMT_DTS::ReadData(void* buf, TypeData td, int* size, int* index, int* g
         if (infovector[i].type_data == td && infovector[i].type_signal==TypeSignal::INPUT)
         {
             jbuf = (char*)infovector[i].buffer;
-            sizedata = infovector[i].size_data * infovector[i].k;
- 
+            sizedata = infovector[i].size_data*infovector[i].k;
+
+            if (sizebuf != sizedata)
+            {
+                std::cout << "GATE_EMT_DTS\tERROR_READDATA: BAD SIZE BUFFER" << std::endl;
+                return -1;
+            }
+
             WaitForSingleObject(infovector[i].mutex, INFINITE);
 
             if (td == TypeData::GROUP)
@@ -315,12 +340,22 @@ int Gate_EMT_DTS::ReadData(void* buf, TypeData td, int* size, int* index, int* g
                 sizedata = 4096;
             }
 
-            for (int i = 0; i < sizedata; i++)
+            try
             {
-                *ibuf = *jbuf;
-                jbuf++;
-                ibuf++;
+                for (int i = 0; i < sizedata; i++)
+                {
+                    *ibuf = *jbuf;
+                    jbuf++;
+                    ibuf++;
+                }  
             }
+            catch (...)
+            {
+                std::cout << "GATE_EMT_DTS\tERROR_READDATA: ERROR COPY BUFFER" << std::endl;
+                ReleaseMutex(infovector[i].mutex);
+                return -1;
+            }
+
             ReleaseMutex(infovector[i].mutex);
             return 0;
         }
@@ -331,44 +366,58 @@ int Gate_EMT_DTS::ReadData(void* buf, TypeData td, int* size, int* index, int* g
     return -1;
 }
 
-int Gate_EMT_DTS::ReadAnalogData(void* buf)
+int Gate_EMT_DTS::ReadAnalogData(void* buf, int sizebuf)
 {
-    return ReadData(buf, TypeData::ANALOG);
+    return ReadData(buf, sizebuf, TypeData::ANALOG);
 }
 
-int Gate_EMT_DTS::ReadDiscreteData(void* buf)
+int Gate_EMT_DTS::ReadDiscreteData(void* buf, int sizebuf)
 {
-    return ReadData(buf, TypeData::DISCRETE);
+    return ReadData(buf, sizebuf, TypeData::DISCRETE);
 }
 
-int Gate_EMT_DTS::ReadBinarData(void* buf)
+int Gate_EMT_DTS::ReadBinarData(void* buf, int sizebuf)
 {
-    return ReadData(buf, TypeData::BINAR);
+    return ReadData(buf, sizebuf, TypeData::BINAR);
 }
 
-int Gate_EMT_DTS::ReadGroupData(void* buf, int* size, int* index, int* grtype)
+int Gate_EMT_DTS::ReadGroupData(void* buf, int sizebuf, int* size, int* index, int* grtype)
 {
-    return ReadData(buf, TypeData::GROUP ,size, index, grtype);
+    return ReadData(buf, sizebuf, TypeData::GROUP ,size, index, grtype);
 }
 
-int Gate_EMT_DTS::WriteAnalogData(void* buf)
+int Gate_EMT_DTS::WriteAnalogData(void* buf, int sizebuf)
 {
-    return WriteData(buf, TypeData::ANALOG);
+    return WriteData(buf, sizebuf, TypeData::ANALOG);
 }
 
-int Gate_EMT_DTS::WriteDiscreteData(void* buf)
+int Gate_EMT_DTS::WriteDiscreteData(void* buf, int sizebuf)
 {
-    return WriteData(buf, TypeData::DISCRETE);
+    return WriteData(buf, sizebuf, TypeData::DISCRETE);
 }
 
-int Gate_EMT_DTS::WriteBinarData(void* buf)
+int Gate_EMT_DTS::WriteBinarData(void* buf, int sizebuf)
 {
-    return WriteData(buf, TypeData::BINAR);
+    return WriteData(buf, sizebuf, TypeData::BINAR);
 }
 
-int Gate_EMT_DTS::WriteGroupData(void* buf, int size, int index, int grtype)
+int Gate_EMT_DTS::WriteGroupData(void* buf, int sizebuf, int size, int index, int grtype)
 {
-    return WriteData(buf, TypeData::GROUP, size, index, grtype);
+    return WriteData(buf, sizebuf, TypeData::GROUP, size, index, grtype);
+}
+
+int Gate_EMT_DTS::ReadSizeData(TypeSignal sig, TypeData dat)
+{
+    int size=0;
+    for (int i = 0; i < infovector.size(); i++)
+    {
+        if (infovector[i].type_signal == sig && infovector[i].type_data == dat)
+        {
+            size = infovector[i].size_data;
+            return size;
+        }
+    }
+    return -1;
 }
 
 Gate_EMT_DTS::Gate_EMT_DTS() {};

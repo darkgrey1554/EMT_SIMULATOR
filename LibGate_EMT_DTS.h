@@ -53,8 +53,8 @@ class Gate_EMT_DTS
 {
 	std::vector<InfoSharedMemory> infovector;
 
-	int WriteData(void* buf, TypeData td, int size = NULL, int index = NULL, int grtype = NULL);
-	int ReadData(void* buf, TypeData td, int* size = NULL, int* index = NULL, int* grtype = NULL);
+	int WriteData(void* buf, int sizebuf,TypeData td, int size = NULL, int index = NULL, int grtype = NULL);
+	int ReadData(void* buf, int sizebuf,TypeData td, int* size = NULL, int* index = NULL, int* grtype = NULL);
 	int ReadConfigFile(const char* filename);
 
 public:
@@ -64,14 +64,15 @@ public:
 	
 	int Init(const char* filename);
 	
-	int ReadAnalogData(void* buf);
-	int ReadDiscreteData(void* buf);
-	int ReadBinarData(void* buf);
-	int ReadGroupData(void* buf, int* size, int* index, int* grtype);
+	int ReadAnalogData(void* buf, int sizebuf);
+	int ReadDiscreteData(void* buf, int sizebuf);
+	int ReadBinarData(void* buf, int sizebuf);
+	int ReadGroupData(void* buf, int sizebuf, int* size, int* index, int* grtype);
 
-	int WriteAnalogData(void* buf);
-	int WriteDiscreteData(void* buf);
-	int WriteBinarData(void* buf);
-	int WriteGroupData(void* buf, int size, int index, int grtype);
+	int WriteAnalogData(void* buf, int sizebuf);
+	int WriteDiscreteData(void* buf, int sizebuf);
+	int WriteBinarData(void* buf, int sizebuf);
+	int WriteGroupData(void* buf, int sizebuf, int size, int index, int grtype);
+	int ReadSizeData(TypeSignal sig, TypeData dat);
 
 };
